@@ -1,0 +1,52 @@
+# =============================================================================
+# Docker Compose — API + Frontend (Ollama rodando no host)
+# Uso: docker compose -f docker-compose.host-ollama.yml up -d
+# =============================================================================
+# AVISO: usa network_mode: host porque o container precisa acessar o Ollama
+# em localhost:11434. O host.docker.internal não funciona confiavelmente no
+# Linux com redes customizadas do Docker Compose.
+
+services:
+  # ─── API (FastAPI + RAG) ─────────────────────────────────────────────────
+  api:
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    image: sector-rag-api:latest
+    container_name: sector-rag-api
+    network_mode: host
+    environment:
+      - RAG_OLLAMA_BASE_URL=http://localhost:11434
+      - RAG_LLM_MODEL=qwen2.5:0.5b
+      - RAG_EMBEDDING_MODEL=nomic-embed-text
+      - RAG_CHROMA_PERSIST_DIR=/data/chroma
+      - RAG_DEBUG=false
+      - RAG_RERANKING_ENABLED=false
+    volumes:
+      - chroma_data:/data/chroma
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ─── Frontend (React + Vite) ──────────────────────────────────────────
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    image: sector-rag-frontend:latest
+    container_name: sector-rag-frontend
+    network_mode: host
+    volumes:
+      - ./frontend/nginx.host-ollama.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  chroma_data:
+    name: sector_rag_chroma_data

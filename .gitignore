@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dados locais
+backend/data/
+backend/*.db
+*chroma/
+
+# Env
+backend/.env
+backend/.env.local
+
+# Docker
+.docker/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+
+# Venv do backend
+backend/venv/

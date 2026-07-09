@@ -1,0 +1,72 @@
+# =============================================================================
+# Docker Compose — Stack completa para desenvolvimento (Sector-RAG)
+# =============================================================================
+
+services:
+  # ─── API (FastAPI + RAG) ─────────────────────────────────────────────────
+  api:
+    build: .
+    container_name: sector-rag-api
+    ports:
+      - "8000:8000"
+    environment:
+      - RAG_OLLAMA_BASE_URL=http://ollama:11434
+      - RAG_LLM_MODEL=qwen2.5:0.5b
+      - RAG_EMBEDDING_MODEL=nomic-embed-text
+      - RAG_CHROMA_PERSIST_DIR=/data/chroma
+      - RAG_DEBUG=true
+      - RAG_RERANKING_ENABLED=false
+    volumes:
+      - chroma_data:/data/chroma
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─── Ollama (LLM + Embeddings) ──────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sector-rag-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Init: baixa os modelos no Ollama ───────────────────────────────────
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: sector-rag-ollama-init
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        echo 'Baixando modelo de linguagem...' &&
+        ollama pull qwen2.5:0.5b &&
+        echo 'Baixando modelo de embeddings...' &&
+        ollama pull nomic-embed-text &&
+        echo 'Modelos prontos!'
+      "
+    restart: no
+
+volumes:
+  chroma_data:
+  ollama_data:

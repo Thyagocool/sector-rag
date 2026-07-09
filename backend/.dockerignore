@@ -1,0 +1,23 @@
+# Ambiente
+venv/
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# Dados locais (persistencia via volume)
+data/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Editores
+*.swp
+*.swo
+
+# Docker
+.docker/
