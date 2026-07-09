@@ -1,5 +1,10 @@
 # Dia 4 — Chunking esperto + mais formatos de documento
 
+> **Projeto original:** `rag-local` | **Fork:** `sector-rag`
+> *Nota: Este documento é do projeto original. No Sector-RAG, o upload também aceita o campo `sector` (form field) e a rota é `POST /upload`.*
+>
+> *As 4 estratégias de chunking e os 15 formatos de documento permanecem idênticos.*
+
 ## O que foi feito
 
 ### Chunking inteligente (app/rag/chunking/)

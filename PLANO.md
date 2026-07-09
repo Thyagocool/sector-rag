@@ -14,7 +14,7 @@
 
 ---
 
-## O que já vem do original
+## O que vem do original
 
 - Backend: FastAPI + LangChain + ChromaDB + Ollama
 - Frontend: React 19 + Vite 8 + TypeScript 6
@@ -36,12 +36,12 @@
 
 ---
 
-## O que será adicionado
+## O que foi adicionado
 
 | Funcionalidade | Descrição |
 |----------------|-----------|
 | Upload com setor | Usuário informa o setor (ex: "RH", "Jurídico") ao subir o arquivo |
-| Pergunta por setor | Usuário seleciona/ informa o setor antes de perguntar |
+| Pergunta por setor | Usuário seleciona/informa o setor antes de perguntar |
 | Filtro no ChromaDB | Busca vetorial filtrada por metadado `sector` |
 | Seletor de setor | Tela inicial do frontend pergunta "Qual setor?" |
 | Painel Admin | Lista setores, exibe chunks, permite limpar por setor |
@@ -52,12 +52,12 @@
 ## Roteiro
 
 ```
-Fase 0 — Fork + setup do projeto                   🔄 EM ANDAMENTO
-Fase 1 — Remover agente, MCP, tracing do backend   ⏳ PENDENTE
-Fase 1 — Remover agente do frontend                ⏳ PENDENTE
-Fase 2 — Setores no backend (schemas, upload, ask) ⏳ PENDENTE
-Fase 3 — Frontend: seletor de setor + admin         ⏳ PENDENTE
-Fase 4 — Ajustes finais + docs + deploy             ⏳ PENDENTE
+Fase 0 — Fork + setup do projeto                   ✅ CONCLUÍDO
+Fase 1 — Remover agente, MCP, tracing do backend   ✅ CONCLUÍDO
+Fase 1 — Remover agente do frontend                ✅ CONCLUÍDO
+Fase 2 — Setores no backend (schemas, upload, ask) ✅ CONCLUÍDO
+Fase 3 — Frontend: seletor de setor + admin        ✅ CONCLUÍDO
+Fase 4 — Ajustes finais + docs + deploy            ✅ CONCLUÍDO
 ```
 
 ---
@@ -65,8 +65,7 @@ Fase 4 — Ajustes finais + docs + deploy             ⏳ PENDENTE
 ## Como rodar
 
 ```bash
-# Opção 1 — Docker completo
-cd backend
+# Opção 1 — Docker completo (raiz)
 docker compose up --build
 
 # Opção 2 — Ollama no host (recomendado para servidores com pouca RAM)

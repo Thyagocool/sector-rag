@@ -1,7 +1,8 @@
 #  Dia 2 — Streaming no RAG + Limpeza do Código
 
 > **Data:** 04/07/2026
-> **Branch:** `main`
+> **Projeto original:** `rag-local` | **Fork:** `sector-rag`
+> *Nota: Este documento é do projeto original. No Sector-RAG, o streaming SSE funciona com `POST /ask/stream` e exige o campo `sector` no body.*
 
 ---
 

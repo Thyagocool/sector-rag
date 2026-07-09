@@ -1,7 +1,8 @@
 #  Dia 1 — Setup + RAG funcional
 
 > **Data:** 30/06/2026
-> **Branch:** `main`
+> **Projeto original:** `rag-local` | **Fork:** `sector-rag`
+> *Nota: Este documento é do projeto original. No Sector-RAG, agentes, MCP e tracing foram removidos; toda rota de RAG agora exige o parâmetro `sector`.*
 
 ---
 

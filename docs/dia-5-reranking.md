@@ -1,5 +1,8 @@
 # Dia 5 — Reranking (melhorar qualidade das respostas)
 
+> **Projeto original:** `rag-local` | **Fork:** `sector-rag`
+> *Nota: Este documento é do projeto original. No Sector-RAG, o reranking continua opcional (desabilitado por padrão) e funciona com filtro por setor.*
+
 ## O que foi feito
 
 ### Problema
