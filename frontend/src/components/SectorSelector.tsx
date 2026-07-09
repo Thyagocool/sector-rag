@@ -1,6 +1,29 @@
 import { useState, useEffect } from "react";
 import { listSectors } from "../services/api";
 
+const STORAGE_KEY = "sector-rag-recent-sectors";
+
+function loadRecentSectors(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentSector(sector: string) {
+  try {
+    const recent = loadRecentSectors();
+    if (!recent.includes(sector)) {
+      recent.unshift(sector);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(recent.slice(0, 10)));
+    }
+  } catch {
+    // localStorage pode estar indisponível
+  }
+}
+
 interface SectorSelectorProps {
   onSectorSelected: (sector: string) => void;
 }
@@ -8,11 +31,14 @@ interface SectorSelectorProps {
 export default function SectorSelector({ onSectorSelected }: SectorSelectorProps) {
   const [input, setInput] = useState("");
   const [sectors, setSectors] = useState<string[]>([]);
+  const [recentSectors, setRecentSectors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"select" | "new">("select");
 
   useEffect(() => {
+    setRecentSectors(loadRecentSectors());
+
     let cancelled = false;
     async function fetchSectors() {
       try {
@@ -31,6 +57,27 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
     return () => { cancelled = true; };
   }, []);
 
+  /** Junta setores da API + recentes, sem duplicatas, ordenados */
+  function allSectors(): string[] {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    // Primeiro os setores com documentos (API)
+    for (const s of sectors) {
+      if (!seen.has(s)) {
+        seen.add(s);
+        result.push(s);
+      }
+    }
+    // Depois os recentes que nao estao na API
+    for (const s of recentSectors) {
+      if (!seen.has(s)) {
+        seen.add(s);
+        result.push(s);
+      }
+    }
+    return result;
+  }
+
   function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const val = e.target.value;
     if (val === "__new__") {
@@ -45,6 +92,7 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
     e.preventDefault();
     const s = input.trim();
     if (!s) return;
+    saveRecentSector(s);
     onSectorSelected(s);
   }
 
@@ -80,11 +128,11 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
                   onChange={handleSelectChange}
                 >
                   <option value="" disabled>
-                    {sectors.length > 0
+                    {allSectors().length > 0
                       ? "— Escolha um setor —"
                       : "— Nenhum setor encontrado —"}
                   </option>
-                  {sectors.map((s) => (
+                  {allSectors().map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
