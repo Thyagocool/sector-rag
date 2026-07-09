@@ -1,6 +1,7 @@
 """Rotas do RAG — apenas roteamento, logica delegada aos use cases."""
 
 import json
+import logging
 import tempfile
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
@@ -20,6 +21,8 @@ from app.rag.use_cases.document_use_case import DocumentUseCase
 from app.rag.vector_store import get_vector_store_adapter
 
 
+logger = logging.getLogger(__name__)
+
 ask_uc = AskUseCase()
 document_uc = DocumentUseCase()
 
@@ -32,10 +35,19 @@ router = APIRouter()
 
 
 def _stream_answer(question: str, sector: str):
-    """Converte tokens do RAG em eventos SSE."""
-    for token in ask_uc.ask_stream(question, sector):
-        yield f"data: {json.dumps({'token': token})}\n\n"
-    yield "data: [DONE]\n\n"
+    """Converte tokens do RAG em eventos SSE.
+
+    Captura excecoes e envia como mensagem de erro SSE para nao
+    deixar o cliente esperando para sempre.
+    """
+    try:
+        for token in ask_uc.ask_stream(question, sector):
+            yield f"data: {json.dumps({'token': token})}\n\n"
+    except Exception as e:
+        logger.exception("Erro no streaming para setor '%s'", sector)
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    finally:
+        yield "data: [DONE]\n\n"
 
 
 # ─── Rotas do RAG ──────────────────────────────────────────────────────
@@ -51,6 +63,7 @@ def ask_rag(payload: AskRequest):
             sources=[Source(**s) for s in result["sources"]],
         )
     except Exception as e:
+        logger.exception("Erro no /ask para setor '%s'", payload.sector)
         raise HTTPException(status_code=500, detail=str(e))
 
 

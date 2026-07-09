@@ -35,53 +35,73 @@ export interface ChunkInfo {
 // ─── RAG: perguntas ─────────────────────────────────────────────────────────
 
 export async function ask(question: string, sector: string): Promise<AskResponse> {
-  const res = await fetch(`${API_BASE}/ask`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, sector }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Erro ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000); // 2min timeout
+
+  try {
+    const res = await fetch(`${API_BASE}/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, sector }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Erro ${res.status}: ${text}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json();
 }
 
 export async function* askStream(question: string, sector: string): AsyncGenerator<string> {
-  const res = await fetch(`${API_BASE}/ask/stream`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, sector }),
-  });
-  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000); // 2min timeout
 
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("Sem stream disponivel");
+  try {
+    const res = await fetch(`${API_BASE}/ask/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, sector }),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`Erro ${res.status}`);
 
-  const decoder = new TextDecoder();
-  let buffer = "";
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("Sem stream disponivel");
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+    const decoder = new TextDecoder();
+    let buffer = "";
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("data: ")) {
-        const payload = trimmed.slice(6);
-        if (payload === "[DONE]") return;
-        try {
-          const parsed = JSON.parse(payload);
-          if (parsed.token) yield parsed.token;
-        } catch {
-          // ignora linhas mal formatadas
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("data: ")) {
+          const payload = trimmed.slice(6);
+          if (payload === "[DONE]") return;
+          try {
+            const parsed = JSON.parse(payload);
+            if (parsed.token) {
+              yield parsed.token;
+            } else if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+          } catch {
+            // ignora linhas mal formatadas
+          }
         }
       }
     }
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
