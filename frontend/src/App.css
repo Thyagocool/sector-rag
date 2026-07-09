@@ -440,7 +440,14 @@ body {
   text-align: left;
 }
 
+.sector-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .sector-input {
+  flex: 1;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -457,6 +464,37 @@ body {
 
 .sector-input::placeholder {
   color: var(--text-dim);
+}
+
+.sector-loading {
+  position: absolute;
+  right: 12px;
+  font-size: 18px;
+  color: var(--text-dim);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.sector-suggestions-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: left;
+  margin-top: -6px;
+  line-height: 1.4;
+}
+
+.sector-error {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  text-align: left;
 }
 
 .btn-sector {

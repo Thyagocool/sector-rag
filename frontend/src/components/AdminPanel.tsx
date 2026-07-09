@@ -77,7 +77,7 @@ export default function AdminPanel({ sector }: AdminPanelProps) {
             <div key={chunk.id || i} className="admin-chunk-card">
               <div className="chunk-header">
                 <span className="chunk-id">#{chunk.id?.slice(0, 12) || i + 1}</span>
-                {chunk.metadata?.source && (
+                {chunk.metadata?.source != null && (
                   <span className="chunk-source">
                     {String(chunk.metadata.source)}
                   </span>
