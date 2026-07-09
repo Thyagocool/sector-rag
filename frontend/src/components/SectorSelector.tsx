@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { listSectors } from "../services/api";
 
 interface SectorSelectorProps {
@@ -10,7 +10,7 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
   const [sectors, setSectors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<"select" | "new">("select");
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +30,16 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
     fetchSectors();
     return () => { cancelled = true; };
   }, []);
+
+  function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value;
+    if (val === "__new__") {
+      setMode("new");
+      setInput("");
+    } else if (val) {
+      setInput(val);
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,41 +61,66 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
         )}
 
         <form onSubmit={handleSubmit} className="sector-form">
-          <label htmlFor="sector-input" className="sector-label">
+          <label htmlFor="sector-select" className="sector-label">
             Qual setor você quer acessar?
           </label>
 
-          <div className="sector-input-wrapper">
-            <input
-              ref={inputRef}
-              id="sector-input"
-              className="sector-input"
-              type="text"
-              placeholder="Ex: RH, Jurídico, Financeiro..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              autoFocus
-              list="sector-list"
-              autoComplete="off"
-            />
-            {!loading && sectors.length > 0 && (
-              <datalist id="sector-list">
-                {sectors.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
-            )}
-            {loading && (
-              <span className="sector-loading" title="Carregando setores...">
-                ↻
-              </span>
-            )}
-          </div>
-
-          {!loading && sectors.length > 0 && input.length > 0 && (
-            <div className="sector-suggestions-label">
-              Setores existentes: {sectors.join(", ")}
+          {loading ? (
+            <div className="sector-loading-wrapper">
+              <span className="sector-loading" />
+              Carregando setores...
             </div>
+          ) : (
+            <>
+              {mode === "select" && (
+                <select
+                  id="sector-select"
+                  className="sector-select"
+                  value={input}
+                  onChange={handleSelectChange}
+                >
+                  <option value="" disabled>
+                    {sectors.length > 0
+                      ? "— Escolha um setor —"
+                      : "— Nenhum setor encontrado —"}
+                  </option>
+                  {sectors.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                  <option value="__new__">+ Novo setor...</option>
+                </select>
+              )}
+
+              {mode === "new" && (
+                <div className="sector-input-wrapper">
+                  <input
+                    id="sector-input"
+                    className="sector-input"
+                    type="text"
+                    placeholder="Digite o nome do novo setor"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="sector-back-btn"
+                    onClick={() => { setMode("select"); setInput(""); }}
+                    title="Voltar para setores existentes"
+                  >
+                    ←
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {mode === "select" && input && (
+            <p className="sector-selected-label">
+              Setor selecionado: <strong>{input}</strong>
+            </p>
           )}
 
           <button
@@ -93,7 +128,7 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
             type="submit"
             disabled={!input.trim()}
           >
-            Acessar setor
+            {mode === "select" && input ? "Acessar setor" : "Criar e acessar"}
           </button>
         </form>
       </div>
