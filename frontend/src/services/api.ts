@@ -32,9 +32,41 @@ export interface ChunkInfo {
   metadata: Record<string, unknown>;
 }
 
+export interface SubTopic {
+  subtopic: string;
+  snippet: string;
+  content: string;
+}
+
+export interface FileTopic {
+  topic: string;
+  snippet: string;
+  subtopics: SubTopic[];
+}
+
+export interface FileInfo {
+  filename: string;
+  topics: FileTopic[];
+}
+
+export interface TopicChunk {
+  chunk_id: string;
+  content: string;
+}
+
+export interface TopicChunksResponse {
+  topic: string;
+  chunks: TopicChunk[];
+}
+
 // ─── RAG: perguntas ─────────────────────────────────────────────────────────
 
-export async function ask(question: string, sector: string): Promise<AskResponse> {
+export async function ask(
+  question: string,
+  sector: string,
+  source?: string,
+  topic?: string,
+): Promise<AskResponse> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 120_000); // 2min timeout
 
@@ -42,7 +74,7 @@ export async function ask(question: string, sector: string): Promise<AskResponse
     const res = await fetch(`${API_BASE}/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, sector }),
+      body: JSON.stringify({ question, sector, source, topic }),
       signal: controller.signal,
     });
     if (!res.ok) {
@@ -55,7 +87,12 @@ export async function ask(question: string, sector: string): Promise<AskResponse
   }
 }
 
-export async function* askStream(question: string, sector: string): AsyncGenerator<string> {
+export async function* askStream(
+  question: string,
+  sector: string,
+  source?: string,
+  topic?: string,
+): AsyncGenerator<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 120_000); // 2min timeout
 
@@ -63,7 +100,7 @@ export async function* askStream(question: string, sector: string): AsyncGenerat
     const res = await fetch(`${API_BASE}/ask/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, sector }),
+      body: JSON.stringify({ question, sector, source, topic }),
       signal: controller.signal,
     });
     if (!res.ok) throw new Error(`Erro ${res.status}`);
@@ -108,28 +145,59 @@ export async function* askStream(question: string, sector: string): AsyncGenerat
 // ─── Documentos ─────────────────────────────────────────────────────────────
 
 export async function uploadDocument(file: File, sector: string): Promise<UploadResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 600_000); // 10min timeout
+
   const form = new FormData();
   form.append("file", file);
   form.append("sector", sector);
 
-  const res = await fetch(`${API_BASE}/upload`, {
-    method: "POST",
-    body: form,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Erro ${res.status}: ${text}`);
+  try {
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Erro ${res.status}: ${text}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json();
 }
 
-// ─── Admin ───────────────────────────────────────────────────────────────────
+// ─── Setor / Arquivos ────────────────────────────────────────────────────────
 
 export async function listSectors(): Promise<string[]> {
   const res = await fetch(`${API_BASE}/sectors`);
   if (!res.ok) throw new Error(`Erro ${res.status}`);
   return res.json();
 }
+
+export async function listFiles(sector: string): Promise<FileInfo[]> {
+  const res = await fetch(`${API_BASE}/sector/files?sector=${encodeURIComponent(sector)}`);
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
+}
+
+export async function listTopicChunks(
+  sector: string,
+  file: string,
+  topic: string,
+): Promise<TopicChunksResponse> {
+  const params = new URLSearchParams({
+    sector,
+    file,
+    topic,
+  });
+  const res = await fetch(`${API_BASE}/sector/topic/chunks?${params}`);
+  if (!res.ok) throw new Error(`Erro ${res.status}`);
+  return res.json();
+}
+
+// ─── Admin ───────────────────────────────────────────────────────────────────
 
 export async function listChunks(sector: string): Promise<ChunkInfo[]> {
   const res = await fetch(`${API_BASE}/admin/chunks?sector=${encodeURIComponent(sector)}`);

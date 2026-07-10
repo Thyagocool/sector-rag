@@ -45,3 +45,19 @@ class VectorStoreAdapter(ABC):
     def delete_by_sector(self, sector: str):
         """Remove todos os chunks de um setor."""
         ...
+
+    @abstractmethod
+    def get_files_by_sector(self, sector: str) -> list[dict]:
+        """Retorna arquivos unicos de um setor com seus chunks.
+        
+        Cada item: {"filename": str, "chunks": list[dict]}
+        """
+        ...
+
+    @abstractmethod
+    def get_chunks_by_topic(self, sector: str, source: str, topic: str) -> list[dict]:
+        """Retorna chunks de um setor + arquivo + tópico específico.
+        
+        Cada item: {"id": str, "content": str, "metadata": dict}
+        """
+        ...

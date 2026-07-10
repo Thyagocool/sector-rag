@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { uploadDocument } from "../services/api";
+import Spinner from "./Spinner";
 
 interface HeaderProps {
   sector: string;
@@ -59,7 +60,7 @@ export default function Header({
           onClick={() => fileRef.current?.click()}
           title="Upload de documento"
         >
-          {uploading ? "Enviando..." : "Upload"}
+          {uploading ? <Spinner size="sm" /> : "Upload"}
         </button>
 
         <button

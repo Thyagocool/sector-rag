@@ -5,8 +5,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # --- Ollama ---
     ollama_base_url: str = "http://localhost:11434"
-    llm_model: str = "qwen2.5:0.5b"
+    llm_model: str = "llama3.2:3b"
     embedding_model: str = "nomic-embed-text"
+    llm_temperature: float = 0.0
 
     # --- ChromaDB ---
     chroma_persist_dir: str = "./data/chroma"

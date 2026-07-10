@@ -17,18 +17,19 @@ class LLMFactory:
     _instances: dict[str, ChatOllama] = {}
 
     @classmethod
-    def get_llm(cls, temperature: float = 0.3, model: str | None = None) -> ChatOllama:
+    def get_llm(cls, temperature: float | None = None, model: str | None = None) -> ChatOllama:
         model = model or settings.llm_model
-        key = f"{model}:{temperature}"
+        temp = temperature if temperature is not None else settings.llm_temperature
+        key = f"{model}:{temp}"
         if key not in cls._instances:
             logger.info(
                 "Criando ChatOllama: model=%s, base_url=%s, temperature=%s",
-                model, settings.ollama_base_url, temperature,
+                model, settings.ollama_base_url, temp,
             )
             cls._instances[key] = ChatOllama(
                 model=model,
                 base_url=settings.ollama_base_url,
-                temperature=temperature,
+                temperature=temp,
                 num_predict=512,          # limita tokens gerados
                 timeout=60,               # timeout HTTP de 60s
             )

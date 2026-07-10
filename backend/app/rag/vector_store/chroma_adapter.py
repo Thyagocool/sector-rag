@@ -74,3 +74,41 @@ class ChromaAdapter(VectorStoreAdapter):
         ids = results["ids"]
         if ids:
             self._store.delete(ids)
+
+    def get_files_by_sector(self, sector: str) -> list[dict]:
+        """Retorna arquivos unicos de um setor com seus chunks."""
+        results = self._store.get(where={"sector": sector})
+        files: dict[str, list[dict]] = {}
+        for i in range(len(results["ids"])):
+            meta = results["metadatas"][i] if results["metadatas"] else {}
+            source = meta.get("source", "desconhecido")
+            if source not in files:
+                files[source] = []
+            files[source].append({
+                "id": results["ids"][i],
+                "content": results["documents"][i],
+                "metadata": meta,
+            })
+        # Ordena arquivos por nome
+        return [
+            {"filename": name, "chunks": chunks}
+            for name, chunks in sorted(files.items())
+        ]
+
+    def get_chunks_by_topic(self, sector: str, source: str, topic: str) -> list[dict]:
+        """Retorna chunks de um setor + arquivo + tópico específico."""
+        results = self._store.get(where={
+            "$and": [
+                {"sector": sector},
+                {"source": source},
+                {"topic": topic},
+            ]
+        })
+        chunks = []
+        for i in range(len(results["ids"])):
+            chunks.append({
+                "id": results["ids"][i],
+                "content": results["documents"][i],
+                "metadata": results["metadatas"][i] if results["metadatas"] else {},
+            })
+        return chunks

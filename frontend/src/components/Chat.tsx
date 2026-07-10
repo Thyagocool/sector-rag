@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ask, askStream, type Source } from "../services/api";
+import Spinner from "./Spinner";
 
 interface Message {
   role: "user" | "assistant";
@@ -9,11 +10,20 @@ interface Message {
 
 interface ChatProps {
   sector: string;
+  source?: string;
+  topic?: string;
+  onBackToFiles?: () => void;
 }
 
-export default function Chat({ sector }: ChatProps) {
+export default function Chat({ sector, source, topic, onBackToFiles }: ChatProps) {
+  const initialMsg = topic
+    ? `Faça uma pergunta sobre o tópico "${topic}" no arquivo "${source}".`
+    : source
+      ? `Faça uma pergunta sobre o arquivo "${source}".`
+      : `Faça uma pergunta sobre os documentos do setor "${sector}".`;
+
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: `Faça uma pergunta sobre os documentos do setor "${sector}".` },
+    { role: "assistant", content: initialMsg },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,12 +38,15 @@ export default function Chat({ sector }: ChatProps) {
     });
   }, [messages]);
 
-  // Reseta quando troca de setor
+  // Reseta quando troca de setor, arquivo ou tópico
   useEffect(() => {
-    setMessages([
-      { role: "assistant", content: `Faça uma pergunta sobre os documentos do setor "${sector}".` },
-    ]);
-  }, [sector]);
+    const greeting = topic
+      ? `Faça uma pergunta sobre o tópico "${topic}" no arquivo "${source}".`
+      : source
+        ? `Faça uma pergunta sobre o arquivo "${source}".`
+        : `Faça uma pergunta sobre os documentos do setor "${sector}".`;
+    setMessages([{ role: "assistant", content: greeting }]);
+  }, [sector, source, topic]);
 
   async function handleSend() {
     const q = input.trim();
@@ -50,7 +63,7 @@ export default function Chat({ sector }: ChatProps) {
       // Tenta streaming primeiro, fallback pra resposta completa
       let streamed = false;
       try {
-        for await (const token of askStream(q, sector)) {
+        for await (const token of askStream(q, sector, source, topic)) {
           streamed = true;
           setMessages((prev) => {
             const idx = prev.length - 1;
@@ -68,7 +81,7 @@ export default function Chat({ sector }: ChatProps) {
       }
 
       if (!streamed) {
-        const result = await ask(q, sector);
+        const result = await ask(q, sector, source, topic);
         setMessages((prev) => {
           const updated = [...prev];
           const last = updated[updated.length - 1];
@@ -108,6 +121,25 @@ export default function Chat({ sector }: ChatProps) {
 
   return (
     <div className="chat-container">
+      {/* Context bar: mostra o arquivo selecionado */}
+      {source && onBackToFiles && (
+        <div className="chat-context-bar">
+          <button className="chat-context-back" onClick={onBackToFiles}>
+            ←
+          </button>
+          <div className="chat-context-info">
+            <span className="chat-context-label">
+              <strong>{source}</strong>
+            </span>
+            {topic && (
+              <span className="chat-context-topic">
+                {topic}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="messages" ref={chatRef}>
         {messages.map((msg, i) => (
           <div key={i} className={`message ${msg.role}`}>
@@ -116,9 +148,9 @@ export default function Chat({ sector }: ChatProps) {
             </div>
             <div className="bubble">
               <div className="msg-content">
-                {msg.content || (loading && i === messages.length - 1 ? (
-                  <span className="typing">pensando</span>
-                ) : null)}
+                  {msg.content || (loading && i === messages.length - 1 ? (
+                    <Spinner size="md" />
+                  ) : null)}
               </div>
 
               {msg.sources && msg.sources.length > 0 && (

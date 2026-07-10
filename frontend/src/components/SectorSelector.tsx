@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { listSectors } from "../services/api";
+import Spinner from "./Spinner";
 
 const STORAGE_KEY = "sector-rag-recent-sectors";
 
@@ -24,17 +25,19 @@ function saveRecentSector(sector: string) {
   }
 }
 
+
+
 interface SectorSelectorProps {
   onSectorSelected: (sector: string) => void;
 }
 
 export default function SectorSelector({ onSectorSelected }: SectorSelectorProps) {
-  const [input, setInput] = useState("");
   const [sectors, setSectors] = useState<string[]>([]);
   const [recentSectors, setRecentSectors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"select" | "new">("select");
+  const [showNewInput, setShowNewInput] = useState(false);
+  const [newSector, setNewSector] = useState("");
 
   useEffect(() => {
     setRecentSectors(loadRecentSectors());
@@ -57,40 +60,26 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
     return () => { cancelled = true; };
   }, []);
 
-  /** Junta setores da API + recentes, sem duplicatas, ordenados */
   function allSectors(): string[] {
     const seen = new Set<string>();
     const result: string[] = [];
-    // Primeiro os setores com documentos (API)
     for (const s of sectors) {
-      if (!seen.has(s)) {
-        seen.add(s);
-        result.push(s);
-      }
+      if (!seen.has(s)) { seen.add(s); result.push(s); }
     }
-    // Depois os recentes que nao estao na API
     for (const s of recentSectors) {
-      if (!seen.has(s)) {
-        seen.add(s);
-        result.push(s);
-      }
+      if (!seen.has(s)) { seen.add(s); result.push(s); }
     }
     return result;
   }
 
-  function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const val = e.target.value;
-    if (val === "__new__") {
-      setMode("new");
-      setInput("");
-    } else if (val) {
-      setInput(val);
-    }
+  function handleSelect(sector: string) {
+    saveRecentSector(sector);
+    onSectorSelected(sector);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleCreateNew(e: React.FormEvent) {
     e.preventDefault();
-    const s = input.trim();
+    const s = newSector.trim();
     if (!s) return;
     saveRecentSector(s);
     onSectorSelected(s);
@@ -98,88 +87,82 @@ export default function SectorSelector({ onSectorSelected }: SectorSelectorProps
 
   return (
     <div className="sector-selector">
-      <div className="sector-card">
-        <h1 className="sector-title">Sector-RAG</h1>
-        <p className="sector-subtitle">
-          Assistente de documentos por setor
-        </p>
+      {/* Header estilo WhatsApp */}
+      <div className="sector-header">
+        <h1 className="sector-header-title">Sector-RAG</h1>
+        <span className="sector-header-sub">Selecione um setor</span>
+      </div>
 
-        {error && (
-          <div className="sector-error">{error}</div>
+      {/* Barra de pesquisa / novo setor */}
+      <div className="sector-toolbar">
+        {!showNewInput ? (
+          <button className="sector-new-btn" onClick={() => setShowNewInput(true)}>
+            <span className="sector-new-icon">+</span>
+            Novo setor
+          </button>
+        ) : (
+          <form onSubmit={handleCreateNew} className="sector-new-form">
+            <input
+              className="sector-new-input"
+              type="text"
+              placeholder="Nome do novo setor..."
+              value={newSector}
+              onChange={(e) => setNewSector(e.target.value)}
+              autoFocus
+            />
+            <button type="submit" className="sector-new-confirm" disabled={!newSector.trim()}>
+              Criar
+            </button>
+            <button
+              type="button"
+              className="sector-new-cancel"
+              onClick={() => { setShowNewInput(false); setNewSector(""); }}
+            >
+              Cancelar
+            </button>
+          </form>
         )}
+      </div>
 
-        <form onSubmit={handleSubmit} className="sector-form">
-          <label htmlFor="sector-select" className="sector-label">
-            Qual setor você quer acessar?
-          </label>
+      {/* Loading */}
+      {loading && (
+        <div className="sector-loading-state">
+          <Spinner text="Carregando setores..." />
+        </div>
+      )}
 
-          {loading ? (
-            <div className="sector-loading-wrapper">
-              <span className="sector-loading" />
-              Carregando setores...
+      {/* Error */}
+      {error && !loading && (
+        <div className="sector-error">{error}</div>
+      )}
+
+      {/* Lista de setores estilo WhatsApp */}
+      {!loading && (
+        <div className="sector-list">
+          {allSectors().length === 0 ? (
+            <div className="sector-empty">
+              <p>Nenhum setor encontrado</p>
+              <p className="sector-empty-hint">Crie um novo setor acima para começar</p>
             </div>
           ) : (
-            <>
-              {mode === "select" && (
-                <select
-                  id="sector-select"
-                  className="sector-select"
-                  value={input}
-                  onChange={handleSelectChange}
-                >
-                  <option value="" disabled>
-                    {allSectors().length > 0
-                      ? "— Escolha um setor —"
-                      : "— Nenhum setor encontrado —"}
-                  </option>
-                  {allSectors().map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                  <option value="__new__">+ Novo setor...</option>
-                </select>
-              )}
-
-              {mode === "new" && (
-                <div className="sector-input-wrapper">
-                  <input
-                    id="sector-input"
-                    className="sector-input"
-                    type="text"
-                    placeholder="Digite o nome do novo setor"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    className="sector-back-btn"
-                    onClick={() => { setMode("select"); setInput(""); }}
-                    title="Voltar para setores existentes"
-                  >
-                    ←
-                  </button>
+            allSectors().map((s) => (
+              <button
+                key={s}
+                className="sector-list-item"
+                onClick={() => handleSelect(s)}
+              >
+                <span className="sector-list-avatar">{s.charAt(0).toUpperCase()}</span>
+                <div className="sector-list-info">
+                  <span className="sector-list-name">{s}</span>
+                  <span className="sector-list-status">
+                    {sectors.includes(s) ? "Documentos indexados" : "Setor recente"}
+                  </span>
                 </div>
-              )}
-            </>
+              </button>
+            ))
           )}
-
-          {mode === "select" && input && (
-            <p className="sector-selected-label">
-              Setor selecionado: <strong>{input}</strong>
-            </p>
-          )}
-
-          <button
-            className="btn btn-sector"
-            type="submit"
-            disabled={!input.trim()}
-          >
-            {mode === "select" && input ? "Acessar setor" : "Criar e acessar"}
-          </button>
-        </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
